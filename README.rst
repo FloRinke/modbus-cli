@@ -52,7 +52,7 @@ ACCESS SYNTAX
 
 [MODBUS_TYPE@]ADDRESS[/BINARY_TYPE][=VALUE]
 
-MODBUS_TYPE = h|i|c|d
+MODBUS_TYPE = h|i|c|d|H|I
   The modbus type, one of
 
   ===== ================ ======= =========
@@ -63,6 +63,8 @@ MODBUS_TYPE = h|i|c|d
   ``c`` coil             1 bit   yes
   ``d`` discrete input   1 bit   no
   ===== ================ ======= =========
+
+  H and I is the same as h and i, but with "mixed endianness" encoding
 
 ADDRESS = <number>
   0-based register address
@@ -105,6 +107,15 @@ REGISTERS FILE SYNTAX
 A ``#`` starts a comment.
 
 Each line contains a symbolic name followed by the register definition, separated by spaces.
+
+About "Mixed Endianness"
+========================
+Modbus specification defines registers as Big Endian, but there is no clear
+definition on how to encode multi-register data types (as they were invented
+later). So obviously vendors interpreted that in both possible ways:
+  Example Number 0x11223344
+  Big Endian encoding; 0x1122, 0x3344
+  "Mixed Endian" encoding: 0x3344, 0x1122
 
 SEE ALSO
 ========

@@ -8,7 +8,7 @@ from itertools import chain, zip_longest, groupby
 
 import umodbus.exceptions
 
-REGISTER_RE = re.compile('([cdhi]@)?(\d*)(/.*)?')
+REGISTER_RE = re.compile('([cdhiHI]@)?(\d*)(/.*)?')
 
 def flatmap(f, items):
     return chain.from_iterable(map(f, items))
@@ -45,7 +45,7 @@ def read_registers(modbus_type, address, pack_types):
             'd': 'read_discrete_inputs',
             'h': 'read_holding_registers',
             'i': 'read_input_registers',
-            }[modbus_type]
+            }[modbus_type.lower()]
 
     message = getattr(modbus, reader)(slave_id, address, n_registers)
 
@@ -60,6 +60,8 @@ def read_registers(modbus_type, address, pack_types):
     if modbus_type in 'cd':
         return words
     else:
+        if modbus_type in 'HI':
+            words.reverse()
         packed = bytes(flatmap(lambda w: [w >> 8, w & 0xff], words))
 
         return struct.unpack(' '.join(pack_types), packed)
@@ -86,7 +88,10 @@ def write_registers(modbus_type, address, values):
             else:
                 value = int(value, 0)
 
-            words.extend([ h << 8 | l for h, l in grouper(struct.pack(pack_type, value), 2) ])
+            encoded = [h << 8 | l for h, l in grouper(struct.pack(pack_type, value), 2)]
+            if modbus_type == 'H':
+                encoded.reverse()
+            words.extend(encoded)
 
         message = modbus.write_multiple_registers(slave_id, address, words)
 
@@ -216,10 +221,9 @@ def parse_accesses(s, registers):
         if pack_type[0] not in '@=<>!':
             pack_type = '!' + pack_type
 
-        modbus_type = modbus_type.lower()
-        if modbus_type not in 'cdhi':
-            fail("Invalid Modbus type '{}'. Valid ones are 'cdhi'", modbus_type)
-        if write and modbus_type not in 'ch':
+        if modbus_type not in 'cdhiHI':
+            fail("Invalid Modbus type '{}'. Valid ones are 'cdhiHI'", modbus_type)
+        if write and modbus_type not in 'chH':
             fail("Invalid Modbus type '{}'. Only coils and holding registers are writable", modbus_type)
 
         accesses.append(Access(name, modbus_type, write, address, pack_type, value))
